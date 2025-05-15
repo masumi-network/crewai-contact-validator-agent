@@ -1,6 +1,7 @@
 import os
 import uvicorn
 import uuid
+import pandas as pd
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query, HTTPException
 from pydantic import BaseModel, Field, field_validator
@@ -8,6 +9,7 @@ from masumi.config import Config
 from masumi.payment import Payment, Amount
 from crew_definition import ResearchCrew
 from logging_config import setup_logging
+from typing import Generator
 
 # Configure logging
 logger = setup_logging()
@@ -68,17 +70,50 @@ class ProvideInputRequest(BaseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 # CrewAI Task Execution
 # ─────────────────────────────────────────────────────────────────────────────
-async def execute_crew_task(input_data: str) -> str:
-    """ Execute a CrewAI task with Research and Writing Agents """
-    logger.info(f"Starting CrewAI task with input: {input_data}")
+
+def read_csv_in_chunks(file_path: str, chunk_size: int = 20) -> Generator[pd.DataFrame, None, None]:
+    """Reads a CSV file in chunks and yields each chunk as a DataFrame."""
+    for chunk in pd.read_csv(file_path, chunksize=chunk_size):
+        
+        yield chunk
+
+async def execute_crew_task(file_path: str) -> list[str]:
+    """ Execute a CrewAI task with Research and Writing Agents using data from a CSV file """
+    logger.info(f"Starting CrewAI task with file: {file_path}")
+
+    chunks = []
+    results = []
     crew = ResearchCrew(logger=logger)
-    result = crew.crew.kickoff(inputs={"text": input_data})
-    logger.info("CrewAI task completed successfully")
-    return result
+     # Adjust the input key as needed
+    
+    # Read the CSV file in chunks
+    for chunk in read_csv_in_chunks(file_path):
+        # Convert the chunk to a string or process it as needed
+        chunk_data = chunk.to_string(index=False)  # Convert DataFrame to string without index
+        chunk_data = chunk_data.replace(" ", "")  # Remove all spaces
+        chunk_data = chunk_data.replace("\n", "")
+        chunk_data = chunk_data.replace("NaN"," ")
+
+        # Uncomment this section when ready to process the chunk with the agent
+        
+        # Print the chunk data and the CHUUUUUUNK message
+        chunks.append(chunk_data)
+
+    for file_chunk in chunks:
+            result = crew.crew.kickoff(inputs={"text": file_chunk})
+            results.append(result) 
+
+    return results
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1) Start Job (MIP-003: /start_job)
 # ─────────────────────────────────────────────────────────────────────────────
+
+@app.post("/force_run")
+async def force_run(data:StartJobRequest):
+    result = await execute_crew_task(data.input_data.get("text"))
+    return result
+
 @app.post("/start_job")
 async def start_job(data: StartJobRequest):
     """ Initiates a job and creates a payment request """
