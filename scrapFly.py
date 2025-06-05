@@ -13,8 +13,11 @@ from typing import Dict
 
 from loguru import logger as log
 from scrapfly import ScrapeConfig, ScrapflyClient
+from dotenv import load_dotenv
 
-SCRAPFLY = ScrapflyClient(key="scp-live-64f88ab4e2c0444f9954b1c338406a74")
+load_dotenv()
+
+SCRAPFLY = ScrapflyClient(key=os.getenv("SCRAPE_KEY"))
 BASE_CONFIG = {
     # X.com (Twitter) requires Anti Scraping Protection bypass feature.
     # for more: https://scrapfly.io/docs/scrape-api/anti-scraping-protection

@@ -122,7 +122,9 @@ class ResearchCrew():
                                             - Email: the email generated addressed from the user comapny to the client
                     
                     Ensure that the email is comprehensive and not brief, as users will edit it to their liking. What is important is that
-                    it contains an abundant amount of information tailored towards the client company.
+                    it contains an abundant amount of information tailored towards the client company
+                    
+                    ENSURE that the output is a valid JSON string without any additional formatting or characters e.g.  wrapped in Markdown code block syntax (``` ``json ```) .
                     """,
                     agent = email_generator,
                     tools = [ScrapeWebsiteTool()],
